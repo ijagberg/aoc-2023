@@ -6,6 +6,7 @@ use std::{
 
 mod calibration;
 mod cubes;
+mod engine;
 
 fn read_lines_from_file(path: &str) -> Vec<String> {
     let path = format!("inputs/{path}");
@@ -146,5 +147,60 @@ mod day2 {
     #[test]
     fn part2() {
         assert_eq!(solve_part2_from_file("day2/input.txt"), 54911);
+    }
+}
+
+mod day3 {
+    use super::*;
+    use crate::engine::{Schematic, SchematicSymbol};
+    use simple_grid::Grid;
+
+    fn parse_schematic_from_file(path: &str) -> Schematic {
+        let lines = read_lines_from_file(path);
+        let w = lines[0].len();
+        let h = lines.len();
+        let chars: Vec<SchematicSymbol> = lines
+            .join("")
+            .chars()
+            .map(|c| match c.to_digit(10) {
+                Some(digit) => SchematicSymbol::Number(digit),
+                None if c == '.' => SchematicSymbol::Period,
+                None => SchematicSymbol::Symbol(c),
+            })
+            .collect();
+
+        Schematic::new(Grid::new(w, h, chars))
+    }
+
+    fn solve_part1_from_file(path: &str) -> u32 {
+        let schematic = parse_schematic_from_file(path);
+        let included_parts = schematic.part_numbers();
+        included_parts.into_iter().sum()
+    }
+
+    fn solve_part2_from_file(path: &str) -> u32 {
+        let schematic = parse_schematic_from_file(path);
+        let gears = schematic.gear_ratios();
+        gears.into_iter().sum()
+    }
+
+    #[test]
+    fn part1_example1() {
+        assert_eq!(solve_part1_from_file("day3/example1.txt"), 4361);
+    }
+
+    #[test]
+    fn part1() {
+        assert_eq!(solve_part1_from_file("day3/input.txt"), 546563);
+    }
+
+    #[test]
+    fn part2_example1() {
+        assert_eq!(solve_part2_from_file("day3/example1.txt"), 467835);
+    }
+
+    #[test]
+    fn part2() {
+        assert_eq!(solve_part2_from_file("day3/input.txt"), 91031374);
     }
 }
