@@ -7,6 +7,7 @@ use std::{
 mod calibration;
 mod cubes;
 mod engine;
+mod scratch;
 
 fn read_lines_from_file(path: &str) -> Vec<String> {
     let path = format!("inputs/{path}");
@@ -202,5 +203,83 @@ mod day3 {
     #[test]
     fn part2() {
         assert_eq!(solve_part2_from_file("day3/input.txt"), 91031374);
+    }
+}
+
+mod day4 {
+    use super::*;
+    use scratch::Card;
+    use std::collections::{HashMap, HashSet};
+
+    fn parse_card_from_line(line: &str) -> Card {
+        // Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
+        let (id, numbers) = line
+            .trim()
+            .strip_prefix("Card ")
+            .unwrap()
+            .trim()
+            .split_once(": ")
+            .unwrap();
+        let id = id.parse().unwrap();
+        // numbers = 41 48 83 86 17 | 83 86  6 31 17  9 48 53
+        let (winning, hand) = numbers.split_once(" | ").unwrap();
+        let winning: HashSet<u32> = winning
+            .split_whitespace()
+            .map(|p| p.parse().unwrap())
+            .collect();
+        let hand: HashSet<u32> = hand
+            .split_whitespace()
+            .map(|p| p.parse().unwrap())
+            .collect();
+
+        Card::new(id, winning, hand)
+    }
+
+    fn parse_cards_from_file(path: &str) -> Vec<Card> {
+        let cards = read_lines_from_file(path)
+            .iter()
+            .filter(|l| !l.trim().is_empty())
+            .map(|l| parse_card_from_line(&l))
+            .collect();
+        cards
+    }
+
+    fn solve_part1_from_file(path: &str) -> u32 {
+        let cards = parse_cards_from_file(path);
+        let mut value = 0;
+        for card in cards {
+            let winning_numbers = card.winning_numbers().count() as u32;
+            if winning_numbers > 0 {
+                value += 2_u32.pow(winning_numbers - 1);
+            }
+        }
+
+        value
+    }
+
+    fn solve_part2_from_file(path: &str) -> u64 {
+        let cards = parse_cards_from_file(path);
+
+        Card::total_scratchcards(&cards)
+    }
+
+    #[test]
+    fn part1_example1() {
+        assert_eq!(solve_part1_from_file("day4/example1.txt"), 13);
+    }
+
+    #[test]
+    fn part1() {
+        assert_eq!(solve_part1_from_file("day4/input.txt"), 32609);
+    }
+
+    #[test]
+    fn part2_example1() {
+        assert_eq!(solve_part2_from_file("day4/example1.txt"), 30);
+    }
+
+    #[test]
+    fn part2() {
+        assert_eq!(solve_part2_from_file("day4/input.txt"), 14624680);
     }
 }
