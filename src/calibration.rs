@@ -4,6 +4,7 @@ static NUMBERS: [&'static str; 18] = [
 ];
 
 pub fn calibration_value(line: &str, include_words: bool) -> Option<u32> {
+    dbg!(line);
     let mut first_occurrences = Vec::with_capacity(line.len());
     let mut last_occurrences = Vec::with_capacity(line.len());
     for number in NUMBERS {
