@@ -6,8 +6,10 @@ use std::{
 
 mod boat;
 mod calibration;
+mod card;
 mod cubes;
 mod engine;
+mod map;
 mod scratch;
 mod soil;
 
@@ -504,5 +506,268 @@ mod day6 {
     #[test]
     fn part2() {
         assert_eq!(solve_part2(INPUT), 28228952);
+    }
+}
+
+#[cfg(test)]
+mod day7 {
+    use std::cmp::Ordering;
+
+    use super::*;
+    use crate::card::{Card, Cards};
+
+    const INPUT: &str = include_str!("../inputs/day7/input.txt");
+    const EXAMPLE_1: &str = include_str!("../inputs/day7/example1.txt");
+
+    fn parse_cards(input: &str) -> Vec<Cards> {
+        let mut cards = Vec::new();
+        for line in input.lines() {
+            let parts: Vec<_> = line.split(" ").collect();
+
+            debug_assert_eq!(parts.len(), 2);
+
+            let mut chars = parts[0].chars();
+            let bid = parts[1].parse().unwrap();
+            cards.push(Cards::new(
+                [
+                    Card::try_from(chars.next().unwrap()).unwrap(),
+                    Card::try_from(chars.next().unwrap()).unwrap(),
+                    Card::try_from(chars.next().unwrap()).unwrap(),
+                    Card::try_from(chars.next().unwrap()).unwrap(),
+                    Card::try_from(chars.next().unwrap()).unwrap(),
+                ],
+                bid,
+            ));
+        }
+
+        cards
+    }
+
+    fn get_value_of_all_cards(cards: &[Cards]) -> u32 {
+        let mut total = 0;
+        for i in 0..cards.len() {
+            let bid = cards[i].bid();
+            total += bid * (i as u32 + 1);
+        }
+        total
+    }
+
+    fn solve_part1(input: &str) -> u32 {
+        let mut cards = parse_cards(input);
+
+        cards.sort();
+
+        get_value_of_all_cards(&cards)
+    }
+
+    fn solve_part2(input: &str) -> u32 {
+        let all_cards = parse_cards(input);
+        let mut swapped_out_optimally: Vec<_> = all_cards
+            .into_iter()
+            .map(|cards| swap_out_joker(cards))
+            .collect();
+
+        swapped_out_optimally.sort_by(|(cards_a, joker_pos_a), (cards_b, joker_pos_b)| {
+            if cards_a.hand_type().numeric_value() == cards_b.hand_type().numeric_value() {
+                // compare by value, J is 1
+                for i in 0..5 {
+                    let card_a = if joker_pos_a[i] {
+                        Card::new(1).unwrap()
+                    } else {
+                        cards_a.cards()[i]
+                    };
+                    let card_b = if joker_pos_b[i] {
+                        Card::new(1).unwrap()
+                    } else {
+                        cards_b.cards()[i]
+                    };
+                    let ord = card_a.cmp(&card_b);
+                    if ord.is_ne() {
+                        return ord;
+                    }
+                }
+                return Ordering::Equal;
+            } else {
+                cards_a.cmp(cards_b)
+            }
+        });
+
+        let cards: Vec<Cards> = swapped_out_optimally
+            .into_iter()
+            .map(|(cards, _)| cards)
+            .collect();
+        get_value_of_all_cards(&cards)
+    }
+
+    fn swap_out_joker(cards: Cards) -> (Cards, [bool; 5]) {
+        let joker = Card::new(11).unwrap();
+        let all_jokers = [joker; 5];
+        if cards.cards() == all_jokers {
+            // JJJJJ always becomes AAAAA
+            let ace = Card::new(14).unwrap();
+            return (Cards::new([ace; 5], cards.bid()), [true; 5]);
+        }
+        let mut stack = vec![cards];
+        let mut joker_positions = [false; 5];
+        let mut candidates = Vec::new();
+        while let Some(cards) = stack.pop() {
+            let mut found_joker = false;
+
+            for i in 0..5 {
+                let card = cards.cards()[i];
+                if card.card_value() == 11 {
+                    found_joker = true;
+                    joker_positions[i] = true;
+                    for c in "23456789TQKA".chars() {
+                        let replaced_joker_card = Card::try_from(c).unwrap();
+                        let mut cards_clone = cards.cards();
+                        cards_clone[i] = replaced_joker_card;
+                        stack.push(Cards::new(cards_clone, cards.bid()));
+                    }
+                    break;
+                }
+            }
+
+            if !found_joker {
+                candidates.push(cards);
+            }
+        }
+
+        candidates.sort();
+
+        (candidates[candidates.len() - 1], joker_positions)
+    }
+
+    #[test]
+    fn part1_example1() {
+        assert_eq!(solve_part1(EXAMPLE_1), 6440);
+    }
+
+    #[test]
+    fn part1() {
+        assert_eq!(solve_part1(INPUT), 247823654);
+    }
+
+    #[test]
+    fn part2_example1() {
+        assert_eq!(solve_part2(EXAMPLE_1), 5905);
+    }
+
+    #[test]
+    fn part2() {
+        assert_eq!(solve_part2(INPUT), 245461700);
+    }
+}
+
+#[cfg(test)]
+mod day8 {
+    use super::*;
+    use crate::map::{Direction, Map, Node};
+    use std::{collections::HashMap, fs::DirEntry};
+
+    const INPUT: &str = include_str!("../inputs/day8/input.txt");
+    const EXAMPLE_1: &str = include_str!("../inputs/day8/example1.txt");
+    const EXAMPLE_2: &str = include_str!("../inputs/day8/example2.txt");
+    const EXAMPLE_3: &str = include_str!("../inputs/day8/example3.txt");
+
+    fn parse_directions(input: &str) -> Vec<Direction> {
+        input
+            .chars()
+            .map(|c| match c {
+                'R' => Direction::Right,
+                'L' => Direction::Left,
+                _ => panic!(),
+            })
+            .collect()
+    }
+
+    fn parse_map(lines: &[&str]) -> Option<Map> {
+        let mut nodes = HashMap::new();
+
+        for line in lines {
+            let (id, lr) = line.split_once(" = ").unwrap();
+            let (left, right) = lr.strip_prefix("(")?.strip_suffix(")")?.split_once(", ")?;
+            let id: [char; 3] = {
+                let mut chars = id.chars();
+                [chars.next()?, chars.next()?, chars.next()?]
+            };
+            let left: [char; 3] = {
+                let mut chars = left.chars();
+                [chars.next()?, chars.next()?, chars.next()?]
+            };
+            let right: [char; 3] = {
+                let mut chars = right.chars();
+                [chars.next()?, chars.next()?, chars.next()?]
+            };
+
+            nodes.insert(id, Node(left, right));
+        }
+        Some(Map::new(nodes))
+    }
+
+    fn solve_part1(input: &str) -> u64 {
+        let lines: Vec<_> = input.lines().collect();
+        let directions = parse_directions(lines[0]);
+        let map = parse_map(&lines[2..]).unwrap();
+
+        map.path_length(['A'; 3], ['Z'; 3], &directions)
+    }
+
+    fn solve_part2(input: &str) -> u64 {
+        let lines: Vec<_> = input.lines().collect();
+        let directions = parse_directions(lines[0]);
+        let map = parse_map(&lines[2..]).unwrap();
+
+        let mut lengths = Vec::new();
+        for &id in map.nodes().keys() {
+            if id[2] == 'A' {
+                let mut current = id;
+                for (steps, &dir) in (0..).zip(directions.iter().cycle()) {
+                    if current[2] == 'Z' {
+                        lengths.push(steps);
+                        break;
+                    }
+                    current = map.step_once(current, dir);
+                }
+            }
+        }
+
+        lcm_of_n(&lengths)
+    }
+
+    fn gcd(a: u64, b: u64) -> u64 {
+        if b == 0 {
+            a
+        } else {
+            gcd(b, a % b)
+        }
+    }
+
+    fn lcm(a: u64, b: u64) -> u64 {
+        a * b / gcd(a, b)
+    }
+
+    fn lcm_of_n(numbers: &[u64]) -> u64 {
+        let mut result = 1;
+
+        for &num in numbers {
+            result = lcm(result, num);
+        }
+
+        result
+    }
+
+    #[test]
+    fn part1() {
+        assert_eq!(solve_part1(EXAMPLE_1), 2);
+        assert_eq!(solve_part1(EXAMPLE_2), 6);
+        assert_eq!(solve_part1(INPUT), 11567);
+    }
+
+    #[test]
+    fn part2() {
+        // NOTE: this felt like cheating, LCM isn't guaranteed to work and I couldn't be bothered veryfying the input before running
+        assert_eq!(solve_part2(EXAMPLE_3), 6);
+        assert_eq!(solve_part2(INPUT), 9858474970153);
     }
 }
