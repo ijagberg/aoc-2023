@@ -8,6 +8,7 @@ mod boat;
 mod calibration;
 mod cubes;
 mod engine;
+mod history;
 mod scratch;
 mod soil;
 
@@ -504,5 +505,44 @@ mod day6 {
     #[test]
     fn part2() {
         assert_eq!(solve_part2(INPUT), 28228952);
+    }
+}
+
+mod day9 {
+    use super::*;
+    use history::*;
+
+    const INPUT: &str = include_str!("../inputs/day9/input.txt");
+    const EXAMPLE_1: &str = include_str!("../inputs/day9/example1.txt");
+
+    fn parse_histories(input: &str) -> Vec<ValueHistory> {
+        input
+            .lines()
+            .map(|l| ValueHistory::new(l.split(" ").map(|p| p.parse().unwrap()).collect()))
+            .collect()
+    }
+
+    fn solve_part1(input: &str) -> i64 {
+        let histories = parse_histories(input);
+
+        histories.into_iter().map(|h| h.next_value()).sum()
+    }
+
+    fn solve_part2(input: &str) -> i64 {
+        let histories = parse_histories(input);
+
+        histories.into_iter().map(|h| h.prev_value()).sum()
+    }
+
+    #[test]
+    fn part1() {
+        assert_eq!(solve_part1(EXAMPLE_1), 114);
+        assert_eq!(solve_part1(INPUT), 1637452029);
+    }
+
+    #[test]
+    fn part2() {
+        assert_eq!(solve_part2(EXAMPLE_1), 2);
+        assert_eq!(solve_part2(INPUT), 908);
     }
 }
