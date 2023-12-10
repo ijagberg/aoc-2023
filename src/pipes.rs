@@ -1,5 +1,8 @@
 use simple_grid::{Grid, GridIndex};
-use std::collections::{HashSet, VecDeque};
+use std::{
+    collections::{HashSet, VecDeque},
+    fmt::Display,
+};
 
 pub struct Pipes {
     pipes: Grid<Tile>,
@@ -15,57 +18,180 @@ impl Pipes {
         Self { pipes, start }
     }
 
-    pub fn find_farthest_point_from_start(&self) -> usize {
-        let mut visited = HashSet::new();
-        let mut queue = VecDeque::new();
-        queue.push_back((0, self.start));
+    pub fn travel_loop(&self) -> Vec<(GridIndex, Direction)> {
+        let mut pipe_loop = Vec::new();
 
-        let mut maximum = None;
-        // bfs
-        while let Some((dist, curr)) = queue.pop_front() {
-            if !visited.contains(&curr) {
-                Self::update_maximum(&mut maximum, dist);
-                visited.insert(curr);
-            } else {
-                continue;
-            }
-
+        let mut queue: VecDeque<(GridIndex, Option<Direction>)> = VecDeque::new();
+        queue.push_back((self.start, None));
+        'travel: while let Some((curr, from_dir)) = queue.pop_front() {
             let current_tile = self.pipes[curr];
-            if let Some(up_idx) = self.pipes.up_index(curr) {
-                let up_tile = self.pipes[up_idx];
-                if Tile::can_move_to(Direction::Down, current_tile)
-                    && Tile::can_move_to(Direction::Up, up_tile)
-                {
-                    queue.push_back((dist + 1, up_idx));
-                }
-            }
-            if let Some(right_idx) = self.pipes.right_index(curr) {
-                let right_tile = self.pipes[right_idx];
-                if Tile::can_move_to(Direction::Left, current_tile)
-                    && Tile::can_move_to(Direction::Right, right_tile)
-                {
-                    queue.push_back((dist + 1, right_idx));
-                }
-            }
-            if let Some(down_idx) = self.pipes.down_index(curr) {
-                let down_tile = self.pipes[down_idx];
-                if Tile::can_move_to(Direction::Up, current_tile)
-                    && Tile::can_move_to(Direction::Down, down_tile)
-                {
-                    queue.push_back((dist + 1, down_idx));
-                }
-            }
-            if let Some(left_idx) = self.pipes.left_index(curr) {
-                let left_tile = self.pipes[left_idx];
-                if Tile::can_move_to(Direction::Right, current_tile)
-                    && Tile::can_move_to(Direction::Left, left_tile)
-                {
-                    queue.push_back((dist + 1, left_idx));
+            for dir in nesw().filter(|d| from_dir.map(|from| from != d.opposite()).unwrap_or(true))
+            {
+                if let Some(neighbor) = self.get_neighbor(curr, dir) {
+                    let neighbor_tile = self.pipes[neighbor];
+                    if Tile::can_move_to(dir, neighbor_tile)
+                        && Tile::can_move_to(dir.opposite(), current_tile)
+                    {
+                        queue.push_back((neighbor, Some(dir)));
+                        pipe_loop.push((curr, dir));
+                        if neighbor == self.start {
+                            break 'travel;
+                        }
+                        break;
+                    }
                 }
             }
         }
 
-        maximum.unwrap()
+        pipe_loop
+    }
+
+    pub fn loop_coverage(&self) -> HashSet<GridIndex> {
+        let pipe_loop = self.travel_loop();
+        let indices_in_loop: HashSet<_> = pipe_loop.iter().map(|(idx, _)| idx).copied().collect();
+        let mut is_clockwise = Self::is_clockwise(&pipe_loop);
+
+        let mut inside = HashSet::new();
+        for (idx, dir) in pipe_loop {
+            let tile = self.pipes[idx];
+            match (dir, is_clockwise, tile) {
+                (Direction::North, true) => {
+                    self.check_inside(self.pipes.right_index(idx), &indices_in_loop, &mut inside)
+                }
+                (Direction::North, false) => {
+                    self.check_inside(self.pipes.left_index(idx), &indices_in_loop, &mut inside)
+                }
+                (Direction::East, true) => {
+                    self.check_inside(self.pipes.down_index(idx), &indices_in_loop, &mut inside)
+                }
+                (Direction::East, false) => {
+                    self.check_inside(self.pipes.up_index(idx), &indices_in_loop, &mut inside)
+                }
+                (Direction::South, true) => {
+                    self.check_inside(self.pipes.left_index(idx), &indices_in_loop, &mut inside)
+                }
+                (Direction::South, false) => {
+                    self.check_inside(self.pipes.right_index(idx), &indices_in_loop, &mut inside)
+                }
+                (Direction::West, true) => {
+                    self.check_inside(self.pipes.up_index(idx), &indices_in_loop, &mut inside)
+                }
+                (Direction::West, false) => {
+                    self.check_inside(self.pipes.down_index(idx), &indices_in_loop, &mut inside)
+                }
+            }
+        }
+
+        let mut queue = VecDeque::new();
+        for &idx in &inside {
+            queue.push_back(idx);
+        }
+
+        let mut visited = HashSet::new();
+        while let Some(curr) = queue.pop_front() {
+            if visited.contains(&curr) {
+                continue;
+            }
+            inside.insert(curr);
+            visited.insert(curr);
+            for n_dir in nesw() {
+                if let Some(n_idx) = self.get_neighbor(curr, n_dir) {
+                    if !indices_in_loop.contains(&n_idx) && !visited.contains(&n_idx) {
+                        queue.push_back(n_idx);
+                    }
+                }
+            }
+        }
+
+        self.print_loop_coverage(&inside);
+
+        inside
+    }
+
+    fn print_loop_coverage(&self, inside_loop: &HashSet<GridIndex>) {
+        enum TileOrFilled {
+            Tile(Tile),
+            Filled,
+        }
+
+        impl Display for TileOrFilled {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                let output = match self {
+                    TileOrFilled::Tile(tile) => tile.to_string(),
+                    TileOrFilled::Filled => "X".to_string(),
+                };
+                write!(f, "{}", output)
+            }
+        }
+
+        let mut output = Grid::new(
+            self.pipes.width(),
+            self.pipes.height(),
+            self.pipes
+                .cell_iter()
+                .map(|c| TileOrFilled::Tile(*c))
+                .collect(),
+        );
+        for &idx in inside_loop {
+            output[idx] = TileOrFilled::Filled;
+        }
+
+        println!("{}", output.to_pretty_string());
+    }
+
+    fn check_inside(
+        &self,
+        maybe_neighbor_idx: Option<GridIndex>,
+        indices_in_loop: &HashSet<GridIndex>,
+        inside: &mut HashSet<GridIndex>,
+    ) {
+        if let Some(neighbor_idx) = maybe_neighbor_idx {
+            if !indices_in_loop.contains(&neighbor_idx) {
+                inside.insert(neighbor_idx);
+            }
+        }
+    }
+
+    fn is_clockwise(pipe_loop: &[(GridIndex, Direction)]) -> bool {
+        let mut sum = 0;
+        for w in pipe_loop.windows(2) {
+            let (_, from) = w[0];
+            let (_, to) = w[1];
+
+            if Self::is_left_turn(from, to) {
+                sum -= 1;
+            }
+            if Self::is_right_turn(from, to) {
+                sum += 1;
+            }
+        }
+
+        sum > 0
+    }
+
+    fn is_left_turn(from: Direction, to: Direction) -> bool {
+        use Direction::*;
+        matches!(
+            (from, to),
+            (North, West) | (East, North) | (South, East) | (West, South)
+        )
+    }
+
+    fn is_right_turn(from: Direction, to: Direction) -> bool {
+        use Direction::*;
+        matches!(
+            (from, to),
+            (East, South) | (South, West) | (West, North) | (North, East)
+        )
+    }
+
+    fn get_neighbor(&self, idx: GridIndex, direction: Direction) -> Option<GridIndex> {
+        match direction {
+            Direction::North => self.pipes.up_index(idx),
+            Direction::East => self.pipes.right_index(idx),
+            Direction::South => self.pipes.down_index(idx),
+            Direction::West => self.pipes.left_index(idx),
+        }
     }
 
     fn update_maximum(curr_max: &mut Option<usize>, new_value: usize) {
@@ -79,12 +205,33 @@ impl Pipes {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-enum Direction {
-    Up,
-    Right,
-    Down,
-    Left,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Direction {
+    North,
+    East,
+    South,
+    West,
+}
+
+impl Direction {
+    fn opposite(&self) -> Self {
+        match self {
+            Direction::North => Self::South,
+            Direction::East => Self::West,
+            Direction::South => Self::North,
+            Direction::West => Self::East,
+        }
+    }
+}
+
+fn nesw() -> impl Iterator<Item = Direction> {
+    [
+        Direction::North,
+        Direction::East,
+        Direction::South,
+        Direction::West,
+    ]
+    .into_iter()
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -104,11 +251,27 @@ impl Tile {
         use Direction::*;
         use Tile::*;
         match direction {
-            Up => matches!(tile, Vert | SW | SE | Start),
-            Right => matches!(tile, Hori | SW | NW | Start),
-            Down => matches!(tile, Vert | NW | NE | Start),
-            Left => matches!(tile, Hori | SE | NE | Start),
+            North => matches!(tile, Vert | SW | SE | Start),
+            East => matches!(tile, Hori | SW | NW | Start),
+            South => matches!(tile, Vert | NW | NE | Start),
+            West => matches!(tile, Hori | SE | NE | Start),
         }
+    }
+}
+
+impl Display for Tile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let output = match self {
+            Tile::Vert => "|",
+            Tile::Hori => "-",
+            Tile::NE => "L",
+            Tile::NW => "J",
+            Tile::SW => "7",
+            Tile::SE => "F",
+            Tile::Ground => ".",
+            Tile::Start => "S",
+        };
+        write!(f, "{}", output)
     }
 }
 
@@ -127,5 +290,55 @@ impl TryFrom<char> for Tile {
             'S' => Self::Start,
             _ => return Err(()),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn example_pipes() -> Pipes {
+        let grid = "........S---7..|...|..|...|..|...|..L---J........";
+
+        Pipes::new(Grid::new(
+            7,
+            7,
+            grid.chars().map(|c| Tile::try_from(c).unwrap()).collect(),
+        ))
+    }
+
+    fn big_example() -> Pipes {
+        let grid = "FF7FSF7F7F7F7F7F---7L|LJ||||||||||||F--JFL-7LJLJ||||||LJL-77F--JF--7||LJLJ7F7FJ-L---JF-JLJ.||-FJLJJ7|F|F-JF---7F7-L7L|7||FFJF7L7F-JF7|JL---77-L-JL7||F7|L7F-7F7|L.L7LFJ|||||FJL7||LJL7JLJL-JLJLJL--JLJ.L";
+        Pipes::new(Grid::new(
+            20,
+            10,
+            grid.chars().map(|c| Tile::try_from(c).unwrap()).collect(),
+        ))
+    }
+
+    #[test]
+    fn is_clockwise_test() {
+        let pipes = example_pipes();
+        let path = pipes.travel_loop();
+
+        dbg!(&path);
+
+        assert!(Pipes::is_clockwise(&path));
+    }
+
+    #[test]
+    fn inside_test() {
+        let pipes = big_example();
+        pipes.loop_coverage();
+
+        assert!(false);
+    }
+
+    #[test]
+    fn print_test() {
+        let pipes = example_pipes();
+        println!("{}", pipes.pipes.to_pretty_string());
+
+        assert!(false);
     }
 }

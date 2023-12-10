@@ -819,13 +819,32 @@ mod day9 {
 
 #[cfg(test)]
 mod day10 {
-    use simple_grid::Grid;
-
     use super::*;
     use crate::pipes::{Pipes, Tile};
+    use simple_grid::Grid;
 
     fn example1() -> String {
         read_file_contents(&input_data("day10", "example1"))
+    }
+
+    fn example2() -> String {
+        read_file_contents(&input_data("day10", "example2"))
+    }
+
+    fn example3() -> String {
+        read_file_contents(&input_data("day10", "example3"))
+    }
+
+    fn example4() -> String {
+        read_file_contents(&input_data("day10", "example4"))
+    }
+
+    fn example5() -> String {
+        read_file_contents(&input_data("day10", "example5"))
+    }
+
+    fn example6() -> String {
+        read_file_contents(&input_data("day10", "example6"))
     }
 
     fn input() -> String {
@@ -845,15 +864,35 @@ mod day10 {
         ))
     }
 
-    fn solve_part1(input: &str) -> u64 {
+    fn solve_part1(input: &str) -> usize {
         let pipes = parse_pipes(input);
 
-        pipes.find_farthest_point_from_start() as u64
+        let pipe_loop = pipes.travel_loop();
+
+        pipe_loop.len() / 2
+    }
+
+    fn solve_part2(input: &str) -> usize {
+        let pipes = parse_pipes(input);
+
+        let coverage = pipes.loop_coverage();
+
+        coverage.len()
     }
 
     #[test]
     fn part1() {
         assert_eq!(solve_part1(&example1()), 8);
-        assert_eq!(solve_part1(&input()), 8);
+        assert_eq!(solve_part1(&example2()), 4);
+        assert_eq!(solve_part1(&input()), 6979);
+    }
+
+    #[test]
+    fn part2() {
+        assert_eq!(solve_part2(&example3()), 10);
+        assert_eq!(solve_part2(&example4()), 8);
+        assert_eq!(solve_part2(&example5()), 4);
+        assert_eq!(solve_part2(&example6()), 3);
+        // assert_eq!(solve_part2(&input()), 10);
     }
 }
