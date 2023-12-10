@@ -1,21 +1,31 @@
 #![allow(unused)]
 use std::{
     fs::File,
-    io::{self, BufRead},
+    io::{self, BufRead, Read},
 };
 
 mod boat;
 mod calibration;
+mod card;
 mod cubes;
 mod engine;
 mod history;
+mod map;
+mod pipes;
 mod scratch;
 mod soil;
 
-fn read_lines_from_file(path: &str) -> impl Iterator<Item = String> {
-    let path = format!("inputs/{path}");
-    let file = File::open(path).unwrap();
-    io::BufReader::new(file).lines().map(|l| l.unwrap())
+fn input_data(day: &str, file: &str) -> String {
+    format!("inputs/{day}/{file}.txt")
+}
+
+fn read_file_contents(path: &str) -> String {
+    let mut s = String::new();
+    std::fs::File::open(path)
+        .expect(&format!("can't open '{}'", path))
+        .read_to_string(&mut s)
+        .unwrap();
+    s
 }
 
 #[cfg(test)]
@@ -23,9 +33,17 @@ mod day1 {
     use super::*;
     use crate::calibration::calibration_value;
 
-    const INPUT: &str = include_str!("../inputs/day1/input.txt");
-    const EXAMPLE_1: &str = include_str!("../inputs/day1/example1.txt");
-    const EXAMPLE_2: &str = include_str!("../inputs/day1/example2.txt");
+    fn example1() -> String {
+        read_file_contents(&input_data("day1", "example1"))
+    }
+
+    fn example2() -> String {
+        read_file_contents(&input_data("day1", "example2"))
+    }
+
+    fn input() -> String {
+        read_file_contents(&input_data("day1", "input"))
+    }
 
     fn solve_part1(input: &str) -> u32 {
         let sum = input
@@ -48,23 +66,15 @@ mod day1 {
     }
 
     #[test]
-    fn part1_example1() {
-        assert_eq!(solve_part1(EXAMPLE_1), 142);
-    }
-
-    #[test]
     fn part1() {
-        assert_eq!(solve_part1(INPUT), 54951);
-    }
-
-    #[test]
-    fn part2_example2() {
-        assert_eq!(solve_part2(EXAMPLE_2), 281);
+        assert_eq!(solve_part1(&example1()), 142);
+        assert_eq!(solve_part1(&input()), 54951);
     }
 
     #[test]
     fn part2() {
-        assert_eq!(solve_part2(INPUT), 55218);
+        assert_eq!(solve_part2(&example2()), 281);
+        assert_eq!(solve_part2(&input()), 55218);
     }
 }
 
@@ -73,8 +83,13 @@ mod day2 {
     use super::*;
     use cubes::CubeSet;
 
-    const INPUT: &str = include_str!("../inputs/day2/input.txt");
-    const EXAMPLE_1: &str = include_str!("../inputs/day2/example1.txt");
+    fn example1() -> String {
+        read_file_contents(&input_data("day2", "example1"))
+    }
+
+    fn input() -> String {
+        read_file_contents(&input_data("day2", "input"))
+    }
 
     fn parse_game(line: &str) -> (u32, Vec<CubeSet>) {
         let (game_id, game_grabs) = line.split_once(": ").unwrap();
@@ -136,23 +151,15 @@ mod day2 {
     }
 
     #[test]
-    fn part1_example1() {
-        assert_eq!(solve_part1(EXAMPLE_1), 8);
-    }
-
-    #[test]
     fn part1() {
-        assert_eq!(solve_part1(INPUT), 2476);
-    }
-
-    #[test]
-    fn part2_example1() {
-        assert_eq!(solve_part2(EXAMPLE_1), 2286);
+        assert_eq!(solve_part1(&example1()), 8);
+        assert_eq!(solve_part1(&input()), 2476);
     }
 
     #[test]
     fn part2() {
-        assert_eq!(solve_part2(INPUT), 54911);
+        assert_eq!(solve_part2(&example1()), 2286);
+        assert_eq!(solve_part2(&input()), 54911);
     }
 }
 
@@ -162,8 +169,13 @@ mod day3 {
     use crate::engine::{Schematic, SchematicSymbol};
     use simple_grid::Grid;
 
-    const INPUT: &str = include_str!("../inputs/day3/input.txt");
-    const EXAMPLE_1: &str = include_str!("../inputs/day3/example1.txt");
+    fn example1() -> String {
+        read_file_contents(&input_data("day3", "example1"))
+    }
+
+    fn input() -> String {
+        read_file_contents(&input_data("day3", "input"))
+    }
 
     fn parse_schematic(input: &str) -> Schematic {
         let lines: Vec<&str> = input.lines().collect();
@@ -195,23 +207,15 @@ mod day3 {
     }
 
     #[test]
-    fn part1_example1() {
-        assert_eq!(solve_part1(EXAMPLE_1), 4361);
-    }
-
-    #[test]
     fn part1() {
-        assert_eq!(solve_part1(INPUT), 546563);
-    }
-
-    #[test]
-    fn part2_example1() {
-        assert_eq!(solve_part2(EXAMPLE_1), 467835);
+        assert_eq!(solve_part1(&example1()), 4361);
+        assert_eq!(solve_part1(&input()), 546563);
     }
 
     #[test]
     fn part2() {
-        assert_eq!(solve_part2(INPUT), 91031374);
+        assert_eq!(solve_part2(&example1()), 467835);
+        assert_eq!(solve_part2(&input()), 91031374);
     }
 }
 
@@ -221,8 +225,13 @@ mod day4 {
     use scratch::Card;
     use std::collections::{HashMap, HashSet};
 
-    const INPUT: &str = include_str!("../inputs/day4/input.txt");
-    const EXAMPLE_1: &str = include_str!("../inputs/day4/example1.txt");
+    fn example1() -> String {
+        read_file_contents(&input_data("day4", "example1"))
+    }
+
+    fn input() -> String {
+        read_file_contents(&input_data("day4", "input"))
+    }
 
     fn parse_card_from_line(line: &str) -> Card {
         // Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
@@ -277,23 +286,15 @@ mod day4 {
     }
 
     #[test]
-    fn part1_example1() {
-        assert_eq!(solve_part1(EXAMPLE_1), 13);
-    }
-
-    #[test]
     fn part1() {
-        assert_eq!(solve_part1(INPUT), 32609);
-    }
-
-    #[test]
-    fn part2_example1() {
-        assert_eq!(solve_part2(EXAMPLE_1), 30);
+        assert_eq!(solve_part1(&example1()), 13);
+        assert_eq!(solve_part1(&input()), 32609);
     }
 
     #[test]
     fn part2() {
-        assert_eq!(solve_part2(INPUT), 14624680);
+        assert_eq!(solve_part2(&example1()), 30);
+        assert_eq!(solve_part2(&input()), 14624680);
     }
 }
 
@@ -302,8 +303,13 @@ mod day5 {
     use super::*;
     use crate::soil::{Almanac, Map, Mappings, Range};
 
-    const INPUT: &str = include_str!("../inputs/day5/input.txt");
-    const EXAMPLE_1: &str = include_str!("../inputs/day5/example1.txt");
+    fn example1() -> String {
+        read_file_contents(&input_data("day5", "example1"))
+    }
+
+    fn input() -> String {
+        read_file_contents(&input_data("day5", "input"))
+    }
 
     fn parse_seeds_from_line(line: &str) -> Vec<u64> {
         // seeds: 1 2 3
@@ -363,23 +369,15 @@ mod day5 {
     }
 
     #[test]
-    fn part1_example1() {
-        assert_eq!(solve_part1(EXAMPLE_1), 35);
-    }
-
-    #[test]
     fn part1() {
-        assert_eq!(solve_part1(INPUT), 313045984);
-    }
-
-    #[test]
-    fn part2_example1() {
-        assert_eq!(solve_part2(EXAMPLE_1), 46);
+        assert_eq!(solve_part1(&example1()), 35);
+        assert_eq!(solve_part1(&input()), 313045984);
     }
 
     #[test]
     fn part2() {
-        assert_eq!(solve_part2(INPUT), 20283860);
+        assert_eq!(solve_part2(&example1()), 46);
+        assert_eq!(solve_part2(&input()), 20283860);
     }
 }
 
@@ -388,8 +386,13 @@ mod day6 {
     use super::*;
     use crate::boat::Race;
 
-    const INPUT: &str = include_str!("../inputs/day6/input.txt");
-    const EXAMPLE_1: &str = include_str!("../inputs/day6/example1.txt");
+    fn example1() -> String {
+        read_file_contents(&input_data("day6", "example1"))
+    }
+
+    fn input() -> String {
+        read_file_contents(&input_data("day6", "input"))
+    }
 
     fn parse_races_part1(input: &str) -> Vec<Race> {
         let lines: Vec<&str> = input.lines().collect();
@@ -488,23 +491,285 @@ mod day6 {
     }
 
     #[test]
-    fn part1_example1() {
-        assert_eq!(solve_part1(EXAMPLE_1), 288);
-    }
-
-    #[test]
     fn part1() {
-        assert_eq!(solve_part1(INPUT), 1084752);
-    }
-
-    #[test]
-    fn part2_example1() {
-        assert_eq!(solve_part2(EXAMPLE_1), 71503);
+        assert_eq!(solve_part1(&example1()), 288);
+        assert_eq!(solve_part1(&input()), 1084752);
     }
 
     #[test]
     fn part2() {
-        assert_eq!(solve_part2(INPUT), 28228952);
+        assert_eq!(solve_part2(&example1()), 71503);
+        assert_eq!(solve_part2(&input()), 28228952);
+    }
+}
+
+#[cfg(test)]
+mod day7 {
+    use super::*;
+    use crate::card::{Card, Cards};
+    use std::cmp::Ordering;
+
+    fn example1() -> String {
+        read_file_contents(&input_data("day7", "example1"))
+    }
+
+    fn input() -> String {
+        read_file_contents(&input_data("day7", "input"))
+    }
+
+    fn parse_cards(input: &str) -> Vec<Cards> {
+        let mut cards = Vec::new();
+        for line in input.lines() {
+            let parts: Vec<_> = line.split(" ").collect();
+
+            debug_assert_eq!(parts.len(), 2);
+
+            let mut chars = parts[0].chars();
+            let bid = parts[1].parse().unwrap();
+            cards.push(Cards::new(
+                [
+                    Card::try_from(chars.next().unwrap()).unwrap(),
+                    Card::try_from(chars.next().unwrap()).unwrap(),
+                    Card::try_from(chars.next().unwrap()).unwrap(),
+                    Card::try_from(chars.next().unwrap()).unwrap(),
+                    Card::try_from(chars.next().unwrap()).unwrap(),
+                ],
+                bid,
+            ));
+        }
+
+        cards
+    }
+
+    fn get_value_of_all_cards(cards: &[Cards]) -> u32 {
+        let mut total = 0;
+        for i in 0..cards.len() {
+            let bid = cards[i].bid();
+            total += bid * (i as u32 + 1);
+        }
+        total
+    }
+
+    fn solve_part1(input: &str) -> u32 {
+        let mut cards = parse_cards(input);
+
+        cards.sort();
+
+        get_value_of_all_cards(&cards)
+    }
+
+    fn solve_part2(input: &str) -> u32 {
+        let all_cards = parse_cards(input);
+        let mut swapped_out_optimally: Vec<_> = all_cards
+            .into_iter()
+            .map(|cards| swap_out_joker(cards))
+            .collect();
+
+        swapped_out_optimally.sort_by(|(cards_a, joker_pos_a), (cards_b, joker_pos_b)| {
+            if cards_a.hand_type().numeric_value() == cards_b.hand_type().numeric_value() {
+                // compare by value, J is 1
+                for i in 0..5 {
+                    let card_a = if joker_pos_a[i] {
+                        Card::new(1).unwrap()
+                    } else {
+                        cards_a.cards()[i]
+                    };
+                    let card_b = if joker_pos_b[i] {
+                        Card::new(1).unwrap()
+                    } else {
+                        cards_b.cards()[i]
+                    };
+                    let ord = card_a.cmp(&card_b);
+                    if ord.is_ne() {
+                        return ord;
+                    }
+                }
+                return Ordering::Equal;
+            } else {
+                cards_a.cmp(cards_b)
+            }
+        });
+
+        let cards: Vec<Cards> = swapped_out_optimally
+            .into_iter()
+            .map(|(cards, _)| cards)
+            .collect();
+        get_value_of_all_cards(&cards)
+    }
+
+    fn swap_out_joker(cards: Cards) -> (Cards, [bool; 5]) {
+        let joker = Card::new(11).unwrap();
+        let all_jokers = [joker; 5];
+        if cards.cards() == all_jokers {
+            // JJJJJ always becomes AAAAA
+            let ace = Card::new(14).unwrap();
+            return (Cards::new([ace; 5], cards.bid()), [true; 5]);
+        }
+        let mut stack = vec![cards];
+        let mut joker_positions = [false; 5];
+        let mut candidates = Vec::new();
+        while let Some(cards) = stack.pop() {
+            let mut found_joker = false;
+
+            for i in 0..5 {
+                let card = cards.cards()[i];
+                if card.card_value() == 11 {
+                    found_joker = true;
+                    joker_positions[i] = true;
+                    for c in "23456789TQKA".chars() {
+                        let replaced_joker_card = Card::try_from(c).unwrap();
+                        let mut cards_clone = cards.cards();
+                        cards_clone[i] = replaced_joker_card;
+                        stack.push(Cards::new(cards_clone, cards.bid()));
+                    }
+                    break;
+                }
+            }
+
+            if !found_joker {
+                candidates.push(cards);
+            }
+        }
+
+        candidates.sort();
+
+        (candidates[candidates.len() - 1], joker_positions)
+    }
+
+    #[test]
+    fn part1() {
+        assert_eq!(solve_part1(&example1()), 6440);
+        assert_eq!(solve_part1(&input()), 247823654);
+    }
+
+    #[test]
+    fn part2() {
+        assert_eq!(solve_part2(&example1()), 5905);
+        assert_eq!(solve_part2(&input()), 245461700);
+    }
+}
+
+#[cfg(test)]
+mod day8 {
+    use super::*;
+    use crate::map::{Direction, Map, Node};
+    use std::{collections::HashMap, fs::DirEntry};
+
+    fn example1() -> String {
+        read_file_contents(&input_data("day8", "example1"))
+    }
+
+    fn example2() -> String {
+        read_file_contents(&input_data("day8", "example2"))
+    }
+
+    fn example3() -> String {
+        read_file_contents(&input_data("day8", "example3"))
+    }
+
+    fn input() -> String {
+        read_file_contents(&input_data("day8", "input"))
+    }
+
+    fn parse_directions(input: &str) -> Vec<Direction> {
+        input
+            .chars()
+            .map(|c| match c {
+                'R' => Direction::Right,
+                'L' => Direction::Left,
+                _ => panic!(),
+            })
+            .collect()
+    }
+
+    fn parse_map(lines: &[&str]) -> Option<Map> {
+        let mut nodes = HashMap::new();
+
+        for line in lines {
+            let (id, lr) = line.split_once(" = ").unwrap();
+            let (left, right) = lr.strip_prefix("(")?.strip_suffix(")")?.split_once(", ")?;
+            let id: [char; 3] = {
+                let mut chars = id.chars();
+                [chars.next()?, chars.next()?, chars.next()?]
+            };
+            let left: [char; 3] = {
+                let mut chars = left.chars();
+                [chars.next()?, chars.next()?, chars.next()?]
+            };
+            let right: [char; 3] = {
+                let mut chars = right.chars();
+                [chars.next()?, chars.next()?, chars.next()?]
+            };
+
+            nodes.insert(id, Node(left, right));
+        }
+        Some(Map::new(nodes))
+    }
+
+    fn solve_part1(input: &str) -> u64 {
+        let lines: Vec<_> = input.lines().collect();
+        let directions = parse_directions(lines[0]);
+        let map = parse_map(&lines[2..]).unwrap();
+
+        map.path_length(['A'; 3], ['Z'; 3], &directions)
+    }
+
+    fn solve_part2(input: &str) -> u64 {
+        let lines: Vec<_> = input.lines().collect();
+        let directions = parse_directions(lines[0]);
+        let map = parse_map(&lines[2..]).unwrap();
+
+        let mut lengths = Vec::new();
+        for &id in map.nodes().keys() {
+            if id[2] == 'A' {
+                let mut current = id;
+                for (steps, &dir) in (0..).zip(directions.iter().cycle()) {
+                    if current[2] == 'Z' {
+                        lengths.push(steps);
+                        break;
+                    }
+                    current = map.step_once(current, dir);
+                }
+            }
+        }
+
+        lcm_of_n(&lengths)
+    }
+
+    fn gcd(a: u64, b: u64) -> u64 {
+        if b == 0 {
+            a
+        } else {
+            gcd(b, a % b)
+        }
+    }
+
+    fn lcm(a: u64, b: u64) -> u64 {
+        a * b / gcd(a, b)
+    }
+
+    fn lcm_of_n(numbers: &[u64]) -> u64 {
+        let mut result = 1;
+
+        for &num in numbers {
+            result = lcm(result, num);
+        }
+
+        result
+    }
+
+    #[test]
+    fn part1() {
+        assert_eq!(solve_part1(&example1()), 2);
+        assert_eq!(solve_part1(&example2()), 6);
+        assert_eq!(solve_part1(&input()), 11567);
+    }
+
+    #[test]
+    fn part2() {
+        // NOTE: this felt like cheating, LCM isn't guaranteed to work and I couldn't be bothered veryfying the input before running
+        assert_eq!(solve_part2(&example3()), 6);
+        assert_eq!(solve_part2(&input()), 9858474970153);
     }
 }
 
@@ -512,8 +777,13 @@ mod day9 {
     use super::*;
     use history::*;
 
-    const INPUT: &str = include_str!("../inputs/day9/input.txt");
-    const EXAMPLE_1: &str = include_str!("../inputs/day9/example1.txt");
+    fn example1() -> String {
+        read_file_contents(&input_data("day9", "example1"))
+    }
+
+    fn input() -> String {
+        read_file_contents(&input_data("day9", "input"))
+    }
 
     fn parse_histories(input: &str) -> Vec<ValueHistory> {
         input
@@ -536,13 +806,54 @@ mod day9 {
 
     #[test]
     fn part1() {
-        assert_eq!(solve_part1(EXAMPLE_1), 114);
-        assert_eq!(solve_part1(INPUT), 1637452029);
+        assert_eq!(solve_part1(&example1()), 114);
+        assert_eq!(solve_part1(&input()), 1637452029);
     }
 
     #[test]
     fn part2() {
-        assert_eq!(solve_part2(EXAMPLE_1), 2);
-        assert_eq!(solve_part2(INPUT), 908);
+        assert_eq!(solve_part2(&example1()), 2);
+        assert_eq!(solve_part2(&input()), 908);
+    }
+}
+
+#[cfg(test)]
+mod day10 {
+    use simple_grid::Grid;
+
+    use super::*;
+    use crate::pipes::{Pipes, Tile};
+
+    fn example1() -> String {
+        read_file_contents(&input_data("day10", "example1"))
+    }
+
+    fn input() -> String {
+        read_file_contents(&input_data("day10", "input"))
+    }
+
+    fn parse_pipes(input: &str) -> Pipes {
+        let lines: Vec<_> = input.lines().collect();
+        Pipes::new(Grid::new(
+            lines[0].len(),
+            lines.len(),
+            lines
+                .into_iter()
+                .flat_map(|l| l.trim().chars())
+                .map(|c| Tile::try_from(c).expect(&c.to_string()))
+                .collect(),
+        ))
+    }
+
+    fn solve_part1(input: &str) -> u64 {
+        let pipes = parse_pipes(input);
+
+        pipes.find_farthest_point_from_start() as u64
+    }
+
+    #[test]
+    fn part1() {
+        assert_eq!(solve_part1(&example1()), 8);
+        assert_eq!(solve_part1(&input()), 8);
     }
 }
