@@ -52,34 +52,83 @@ impl Pipes {
         let mut is_clockwise = Self::is_clockwise(&pipe_loop);
 
         let mut inside = HashSet::new();
+        let mut prev_dir = pipe_loop[pipe_loop.len() - 1].1;
         for (idx, dir) in pipe_loop {
-            let tile = self.pipes[idx];
-            match (dir, is_clockwise, tile) {
+            match (dir, is_clockwise) {
                 (Direction::North, true) => {
-                    self.check_inside(self.pipes.right_index(idx), &indices_in_loop, &mut inside)
+                    self.check_inside(self.pipes.right_index(idx), &indices_in_loop, &mut inside);
+                    if prev_dir == Direction::East {
+                        self.check_inside(
+                            self.pipes.down_index(idx),
+                            &indices_in_loop,
+                            &mut inside,
+                        );
+                    }
                 }
                 (Direction::North, false) => {
-                    self.check_inside(self.pipes.left_index(idx), &indices_in_loop, &mut inside)
+                    self.check_inside(self.pipes.left_index(idx), &indices_in_loop, &mut inside);
+                    if prev_dir == Direction::West {
+                        self.check_inside(
+                            self.pipes.down_index(idx),
+                            &indices_in_loop,
+                            &mut inside,
+                        );
+                    }
                 }
                 (Direction::East, true) => {
-                    self.check_inside(self.pipes.down_index(idx), &indices_in_loop, &mut inside)
+                    self.check_inside(self.pipes.down_index(idx), &indices_in_loop, &mut inside);
+                    if prev_dir == Direction::South {
+                        self.check_inside(
+                            self.pipes.left_index(idx),
+                            &indices_in_loop,
+                            &mut inside,
+                        );
+                    }
                 }
                 (Direction::East, false) => {
-                    self.check_inside(self.pipes.up_index(idx), &indices_in_loop, &mut inside)
+                    self.check_inside(self.pipes.up_index(idx), &indices_in_loop, &mut inside);
+                    if prev_dir == Direction::North {
+                        self.check_inside(
+                            self.pipes.left_index(idx),
+                            &indices_in_loop,
+                            &mut inside,
+                        );
+                    }
                 }
                 (Direction::South, true) => {
-                    self.check_inside(self.pipes.left_index(idx), &indices_in_loop, &mut inside)
+                    self.check_inside(self.pipes.left_index(idx), &indices_in_loop, &mut inside);
+                    if prev_dir == Direction::West {
+                        self.check_inside(self.pipes.up_index(idx), &indices_in_loop, &mut inside);
+                    }
                 }
                 (Direction::South, false) => {
-                    self.check_inside(self.pipes.right_index(idx), &indices_in_loop, &mut inside)
+                    self.check_inside(self.pipes.right_index(idx), &indices_in_loop, &mut inside);
+                    if prev_dir == Direction::East {
+                        self.check_inside(self.pipes.up_index(idx), &indices_in_loop, &mut inside);
+                    }
                 }
                 (Direction::West, true) => {
-                    self.check_inside(self.pipes.up_index(idx), &indices_in_loop, &mut inside)
+                    self.check_inside(self.pipes.up_index(idx), &indices_in_loop, &mut inside);
+                    if prev_dir == Direction::North {
+                        self.check_inside(
+                            self.pipes.right_index(idx),
+                            &indices_in_loop,
+                            &mut inside,
+                        );
+                    }
                 }
                 (Direction::West, false) => {
-                    self.check_inside(self.pipes.down_index(idx), &indices_in_loop, &mut inside)
+                    self.check_inside(self.pipes.down_index(idx), &indices_in_loop, &mut inside);
+                    if prev_dir == Direction::South {
+                        self.check_inside(
+                            self.pipes.right_index(idx),
+                            &indices_in_loop,
+                            &mut inside,
+                        );
+                    }
                 }
             }
+            prev_dir = dir;
         }
 
         let mut queue = VecDeque::new();
@@ -103,13 +152,12 @@ impl Pipes {
             }
         }
 
-        self.print_loop_coverage(&inside);
-
         inside
     }
 
-    fn print_loop_coverage(&self, inside_loop: &HashSet<GridIndex>) {
+    fn print_loop_coverage(&self, inside_loop: &HashSet<GridIndex>, in_loop: &HashSet<GridIndex>) {
         enum TileOrFilled {
+            Loop,
             Tile(Tile),
             Filled,
         }
@@ -117,7 +165,22 @@ impl Pipes {
         impl Display for TileOrFilled {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 let output = match self {
-                    TileOrFilled::Tile(tile) => tile.to_string(),
+                    TileOrFilled::Loop => "O".to_string(),
+                    TileOrFilled::Tile(tile) => {
+                        tile.to_string();
+                        ();
+                        match tile {
+                            Tile::Vert => "│",
+                            Tile::Hori => "─",
+                            Tile::NE => "└",
+                            Tile::NW => "┘",
+                            Tile::SW => "┐",
+                            Tile::SE => "┌",
+                            Tile::Ground => ".",
+                            Tile::Start => "S",
+                        }
+                        .to_string()
+                    }
                     TileOrFilled::Filled => "X".to_string(),
                 };
                 write!(f, "{}", output)
@@ -128,15 +191,29 @@ impl Pipes {
             self.pipes.width(),
             self.pipes.height(),
             self.pipes
-                .cell_iter()
-                .map(|c| TileOrFilled::Tile(*c))
+                .indices()
+                .map(|c| {
+                    if !in_loop.contains(&c) {
+                        TileOrFilled::Tile(Tile::Ground)
+                    } else {
+                        TileOrFilled::Tile(self.pipes[c])
+                    }
+                })
                 .collect(),
         );
         for &idx in inside_loop {
             output[idx] = TileOrFilled::Filled;
         }
+        for &idx in in_loop {
+            // output[idx] = TileOrFilled::Loop;
+        }
 
-        println!("{}", output.to_pretty_string());
+        for row in output.rows() {
+            let output: Vec<_> = output.row_iter(row).map(|c| c.to_string()).collect();
+            println!("{}", output.join(""));
+        }
+
+        // println!("{}", output.to_pretty_string());
     }
 
     fn check_inside(
@@ -324,21 +401,5 @@ mod tests {
         dbg!(&path);
 
         assert!(Pipes::is_clockwise(&path));
-    }
-
-    #[test]
-    fn inside_test() {
-        let pipes = big_example();
-        pipes.loop_coverage();
-
-        assert!(false);
-    }
-
-    #[test]
-    fn print_test() {
-        let pipes = example_pipes();
-        println!("{}", pipes.pipes.to_pretty_string());
-
-        assert!(false);
     }
 }
