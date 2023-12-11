@@ -195,7 +195,7 @@ pub struct Card(u32);
 
 impl Card {
     pub fn new(v: u32) -> Result<Self, ()> {
-        if v < 1 || v > 14 {
+        if !(1..=14).contains(&v) {
             Err(())
         } else {
             Ok(Self(v))

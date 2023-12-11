@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, os::raw};
+use std::{cmp::Ordering, collections::VecDeque, os::raw};
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Range {
@@ -85,21 +85,23 @@ impl Map {
 
     fn convert(&self, input: Range) -> Option<(Range, Vec<Range>)> {
         if let Some((overlap, remaining)) = self.source.overlap(input) {
-            if self.dest.start < self.source.start {
-                let diff = self.source.start - self.dest.start;
-                // subtract diff to get to dest
-                Some((
-                    Range::new(overlap.start - diff, overlap.end - diff),
-                    remaining,
-                ))
-            } else if self.dest.start > self.source.start {
-                let diff = self.dest.start - self.source.start;
-                Some((
-                    Range::new(overlap.start + diff, overlap.end + diff),
-                    remaining,
-                ))
-            } else {
-                unreachable!()
+            match self.dest.start.cmp(&self.source.start) {
+                Ordering::Less => {
+                    let diff = self.source.start - self.dest.start;
+                    // subtract diff to get to dest
+                    Some((
+                        Range::new(overlap.start - diff, overlap.end - diff),
+                        remaining,
+                    ))
+                }
+                Ordering::Greater => {
+                    let diff = self.dest.start - self.source.start;
+                    Some((
+                        Range::new(overlap.start + diff, overlap.end + diff),
+                        remaining,
+                    ))
+                }
+                _ => unreachable!(),
             }
         } else {
             None

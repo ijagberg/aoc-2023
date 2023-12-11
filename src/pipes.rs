@@ -166,21 +166,17 @@ impl Pipes {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 let output = match self {
                     TileOrFilled::Loop => "O".to_string(),
-                    TileOrFilled::Tile(tile) => {
-                        tile.to_string();
-                        ();
-                        match tile {
-                            Tile::Vert => "│",
-                            Tile::Hori => "─",
-                            Tile::NE => "└",
-                            Tile::NW => "┘",
-                            Tile::SW => "┐",
-                            Tile::SE => "┌",
-                            Tile::Ground => ".",
-                            Tile::Start => "S",
-                        }
-                        .to_string()
+                    TileOrFilled::Tile(tile) => match tile {
+                        Tile::Vert => "│",
+                        Tile::Hori => "─",
+                        Tile::NE => "└",
+                        Tile::NW => "┘",
+                        Tile::SW => "┐",
+                        Tile::SE => "┌",
+                        Tile::Ground => ".",
+                        Tile::Start => "S",
                     }
+                    .to_string(),
                     TileOrFilled::Filled => "X".to_string(),
                 };
                 write!(f, "{}", output)

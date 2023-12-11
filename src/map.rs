@@ -14,7 +14,7 @@ impl Map {
     pub fn path_length(&self, from: Id, to: Id, path: &[Direction]) -> u64 {
         use Direction::*;
         let mut current = from;
-        for (count, dir) in path.into_iter().cycle().enumerate() {
+        for (count, dir) in path.iter().cycle().enumerate() {
             if current == to {
                 return count as u64;
             }

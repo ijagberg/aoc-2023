@@ -1,4 +1,4 @@
-static NUMBERS: [&'static str; 18] = [
+static NUMBERS: [&str; 18] = [
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "one", "two", "three", "four", "five", "six",
     "seven", "eight", "nine",
 ];

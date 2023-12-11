@@ -20,8 +20,8 @@ impl Schematic {
         }
     }
 
-    pub fn parts(&self) -> Vec<Part> {
-        self.parts.iter().copied().collect()
+    pub fn parts(&self) -> &Vec<Part> {
+        &self.parts
     }
 
     pub fn part_numbers(&self) -> Vec<u32> {
@@ -149,7 +149,7 @@ impl SchematicSymbol {
         if let Self::Number(v) = self {
             v
         } else {
-            None.unwrap()
+            panic!()
         }
     }
 }
